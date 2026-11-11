@@ -1,0 +1,36 @@
+# 3 servicers, 1 slowly tumbling client, 4 docking ports.
+name: rendezvous_3v1
+num_servicers: 3
+orbit_altitude_m: 400000
+physics_dt: 0.01
+control_decimation: 10
+max_steps: 600
+
+client:
+  half_size: [1.0, 1.0, 1.0]
+  mass: 500.0
+  init_omega: [0.0, 0.0, 0.02]
+  ports:
+    - [1.35, 0.0, 0.0]
+    - [-1.35, 0.0, 0.0]
+    - [0.0, 1.35, 0.0]
+    - [0.0, -1.35, 0.0]
+
+thrusters:
+  max_thrust: 2.0
+  isp: 220.0
+  fuel_kg: 0.1
+  deadband: 0.05
+
+comms:
+  policy: tsb          # tsb | broadcast | none
+  range_m: 30.0
+  latency_steps: 1
+  drop_prob: 0.05
+  max_msgs_per_sender: 2
+  require_los: true
+  tsb:
+    k: 1
+    threshold: 0.3
+    dist_scale: 10.0
+    conflict_weight: 1.0

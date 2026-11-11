@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+videos/
+runs/
+outputs/
+wandb/
+*.mp4
