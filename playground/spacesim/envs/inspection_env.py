@@ -72,6 +72,13 @@ class InspectionEnv(OrbitalServicingEnv):
             extra_state = self.N * (4 + 3)
             self.point_err = np.zeros(self.N)
             self.delivered = np.ones(self.N)
+            self._adcs_every = max(1, int(round(1.0 / (self.spec.adcs.rate_hz * cfg.physics_dt))))
+            self._t_rw = np.zeros((self.N, 3))
+            mm = self.model
+            self._cache_client = (self.ids.client_body, mm.jnt_qposadr[self.ids.client_joint],
+                                  mm.jnt_dofadr[self.ids.client_joint])
+            self._cache_sv = [(b, mm.jnt_qposadr[j], mm.jnt_dofadr[j], float(mm.body_mass[b]))
+                              for b, j in zip(self.ids.servicer_bodies, self.ids.servicer_joints)]
         obs_dim = 6 + 4 + 3 + 3 + 6 + 6 + 1 + 1 + extra + (self.N - 1) * (self.payload_dim + 2)
         state_dim = 6 * self.N + 7 + 3 + 6 + self.N + extra_state
         self._obs_space = spaces.Box(-np.inf, np.inf, (obs_dim,), np.float32)
@@ -128,6 +135,7 @@ class InspectionEnv(OrbitalServicingEnv):
         mujoco.mj_forward(m, d)
         self.point_err[:] = 0.0
         self.delivered[:] = 1.0
+        self._t_rw[:] = 0.0
 
     def _servicer_rot(self, i):
         return self.data.xmat[self.ids.servicer_bodies[i]].reshape(3, 3).copy()
@@ -145,20 +153,31 @@ class InspectionEnv(OrbitalServicingEnv):
             self.delivered[i] = min(1.0, (f @ f_des) / n ** 2) if n > 1e-9 else 1.0
         return Fb, Tb, used
 
-    def _apply_spec_forces(self, Fb, Tb, dt):
-        m, d = self.model, self.data
-        d.xfrc_applied[:] = 0.0
-        cb, cj = self.ids.client_body, self.ids.client_joint
-        cp, cv = self._free_state(cj)
-        d.xfrc_applied[cb, :3] = m.body_mass[cb] * hcw_accel(cp, cv, self.n_orbit)
-        for i, (b, j) in enumerate(zip(self.ids.servicer_bodies, self.ids.servicer_joints)):
-            p, v = self._free_state(j)
+    def _apply_spec_forces(self, Fb, Tb, dt, update_adcs):
+        """Hot path (runs every physics substep). ADCS updates at its own rate and its
+        wheel torque is held in between, like a real flight computer."""
+        m, d, n = self.model, self.data, self.n_orbit
+        n2 = n * n
+        xf = d.xfrc_applied
+        xf[:] = 0.0
+        cb, cqa, cda = self._cache_client
+        cp, cv = d.qpos[cqa:cqa + 3], d.qvel[cda:cda + 3]
+        cm = m.body_mass[cb]
+        xf[cb, 0] = cm * (3 * n2 * cp[0] + 2 * n * cv[1])
+        xf[cb, 1] = cm * (-2 * n * cv[0])
+        xf[cb, 2] = cm * (-n2 * cp[2])
+        for i, (b, qa, da, mass) in enumerate(self._cache_sv):
+            p, v = d.qpos[qa:qa + 3], d.qvel[da:da + 3]
             R = d.xmat[b].reshape(3, 3)
-            omega = d.qvel[m.jnt_dofadr[j] + 3:m.jnt_dofadr[j] + 6]
-            tau, self.point_err[i] = self.adcs.torque(R, omega, pointing_frame(p, cp), los_rate(p, v, cp, cv))
-            t_rw = self.wheels.apply(i, tau, dt)
-            d.xfrc_applied[b, :3] = R @ Fb[i] + m.body_mass[b] * hcw_accel(p, v, self.n_orbit)
-            d.xfrc_applied[b, 3:] = R @ (Tb[i] + t_rw)
+            if update_adcs:
+                omega = d.qvel[da + 3:da + 6]
+                tau, self.point_err[i] = self.adcs.torque(R, omega, pointing_frame(p, cp), los_rate(p, v, cp, cv))
+                self._t_rw[i] = self.wheels.apply(i, tau, dt * self._adcs_every)
+            f = R @ Fb[i]
+            xf[b, 0] = f[0] + mass * (3 * n2 * p[0] + 2 * n * v[1])
+            xf[b, 1] = f[1] + mass * (-2 * n * v[0])
+            xf[b, 2] = f[2] + mass * (-n2 * p[2])
+            xf[b, 3:] = R @ (Tb[i] + self._t_rw[i])
 
     def step(self, actions):
         m, d, c = self.model, self.data, self.cfg
@@ -167,8 +186,8 @@ class InspectionEnv(OrbitalServicingEnv):
         if self.spec:
             Fb, Tb, fuel_used = self._spec_command(cmd)
             self.last_thrust = np.array([self._servicer_rot(i) @ Fb[i] for i in range(self.N)])
-            for _ in range(c.control_decimation):
-                self._apply_spec_forces(Fb, Tb, c.physics_dt)
+            for k in range(c.control_decimation):
+                self._apply_spec_forces(Fb, Tb, c.physics_dt, k % self._adcs_every == 0)
                 mujoco.mj_step(m, d)
                 self.collided |= self._client_contact()
         else:

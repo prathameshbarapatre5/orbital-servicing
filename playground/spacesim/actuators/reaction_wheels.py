@@ -18,9 +18,9 @@ class ReactionWheels:
 
     def apply(self, i, torque_body_cmd, dt):
         """Torque delivered to the bus (body frame). Wheels spin the opposite way."""
-        tw = np.clip(self.Ainv @ torque_body_cmd, -self.tmax, self.tmax)
+        tw = np.minimum(np.maximum(self.Ainv @ torque_body_cmd, -self.tmax), self.tmax)
         # the bus gets +tw, the wheels absorb -tw; respect momentum limits
-        h_new = np.clip(self.h[i] - tw * dt, -self.hmax, self.hmax)
+        h_new = np.minimum(np.maximum(self.h[i] - tw * dt, -self.hmax), self.hmax)
         tw = (self.h[i] - h_new) / dt
         self.h[i] = h_new
         return self.A @ tw

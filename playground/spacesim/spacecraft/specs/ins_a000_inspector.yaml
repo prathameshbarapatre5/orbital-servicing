@@ -7,7 +7,7 @@ bus_half_size: [0.183, 0.113, 0.05] # CAD: 366 x 226 x 100 mm bus
 inertia: [0.061, 0.144, 0.185]      # ASSUMED uniform box; replace with Fusion inertia about CoM
 com: [0.0, 0.0, 0.0]                # ASSUMED geometric center
 propellant_kg: 0.5                  # ASSUMED; CAD tank ~0.7 L (Tank_Shell 60 x 200 x 76 mm)
-visual_mesh: ../scenarios/assets/inspector_6u.obj
+visual_mesh: ../../scenarios/assets/inspector_6u.obj
 
 thrusters:
   # CAD: 8 monoprop thrusters (Chamber_Nozzle_Shell_Refractory) on the end-plate corners
@@ -35,6 +35,7 @@ sensors:
   - {name: tof_ranger, kind: tof, boresight: [1, 0, 0], fov_deg: 30, r_min: 0.5, r_max: 10.0, needs_sun: false, counts_for_coverage: false}
 
 adcs:
+  rate_hz: 20.0                     # ADCS loop rate (torque held between updates)
   bandwidth: 0.4
   damping: 0.9
   dump_threshold: 0.6

@@ -1,4 +1,6 @@
 """Design-driven vehicle: spec loading, thruster allocation, wheels, ADCS, sensors."""
+import os
+
 import numpy as np
 import pytest
 
@@ -18,6 +20,7 @@ def spec():
 
 def test_spec_from_cad(spec):
     assert len(spec.thrusters) == 8 and len(spec.wheels) == 3 and len(spec.sensors) == 4
+    assert os.path.exists(spec.visual_mesh), f"visual mesh not found: {spec.visual_mesh}"
     # canted-corner layout: 4 x 0.1 N x cos(30) along X, 4 x 0.1 N x 0.354 along Y and Z
     assert np.allclose(spec.max_axis_force, [0.3464, 0.1416, 0.1416], atol=2e-3)
 

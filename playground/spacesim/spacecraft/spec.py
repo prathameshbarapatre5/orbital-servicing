@@ -43,6 +43,7 @@ class SensorSpec:
 
 @dataclass
 class ADCSSpec:
+    rate_hz: float = 20.0         # control loop rate; real CubeSat ADCS runs ~1-20 Hz
     bandwidth: float = 0.4        # rad/s, closed-loop natural frequency
     damping: float = 0.9
     dump_threshold: float = 0.6   # start thruster momentum dumping at this wheel-momentum fraction
