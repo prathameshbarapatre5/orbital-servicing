@@ -13,4 +13,4 @@ build-backend = "setuptools.build_meta"
 include = ["spacesim*"]
 
 [tool.setuptools.package-data]
-spacesim = ["scenarios/*.yaml"]
+spacesim = ["scenarios/*.yaml", "scenarios/assets/*", "spacecraft/specs/*.yaml"]

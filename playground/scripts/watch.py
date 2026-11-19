@@ -3,8 +3,8 @@
   python scripts/watch.py --agent scripted --policy tsb
   python scripts/watch.py --agent random --policy broadcast --speed 4
 
-Agents: random | zero | scripted (privileged expert). A trained policy plugs
-in later through the same reset()/act(obs) interface.
+Agents: random | zero | scripted (docking expert) | inspector (inspection baseline).
+Any agent with reset() and act(obs) -> {agent: action} can be passed in from Python.
 """
 import argparse
 import time
@@ -13,8 +13,7 @@ import mujoco
 import mujoco.viewer
 
 from spacesim.agents.scripted import make_agent
-from spacesim.config import ScenarioConfig
-from spacesim.envs.servicing_env import OrbitalServicingEnv
+from spacesim.envs.registry import build_env, load_config
 from spacesim.viz.overlay import draw_overlay
 
 
@@ -29,18 +28,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", default=None)
     ap.add_argument("--policy", default=None, choices=[None, "tsb", "random_k", "broadcast", "none"])
-    ap.add_argument("--agent", default="scripted", choices=["random", "zero", "scripted"])
+    ap.add_argument("--agent", default="scripted",
+                    help="random | zero | scripted | inspector")
     ap.add_argument("--episodes", type=int, default=3)
     ap.add_argument("--max-steps", type=int, default=None)
     ap.add_argument("--speed", type=float, default=2.0, help="playback speed vs real time")
     args = ap.parse_args()
 
-    cfg = ScenarioConfig.from_yaml(args.scenario) if args.scenario else ScenarioConfig()
+    cfg = load_config(args.scenario)
     if args.policy:
         cfg.comms.policy = args.policy
     if args.max_steps:
         cfg.max_steps = args.max_steps
-    env = OrbitalServicingEnv(cfg)
+    env = build_env(cfg)
     agent = make_agent(args.agent, env)
 
     with launch(env.model, env.data) as v:

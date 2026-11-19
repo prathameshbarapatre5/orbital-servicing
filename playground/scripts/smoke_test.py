@@ -7,8 +7,7 @@ import time
 
 import numpy as np
 
-from spacesim.config import ScenarioConfig
-from spacesim.envs.servicing_env import OrbitalServicingEnv
+from spacesim.envs.registry import build_env, load_config
 
 
 def main():
@@ -16,25 +15,29 @@ def main():
     ap.add_argument("--scenario", default=None)
     ap.add_argument("--policy", default=None, choices=[None, "tsb", "broadcast", "none", "random_k"])
     ap.add_argument("--episodes", type=int, default=3)
+    ap.add_argument("--agent", default="random", help="random | zero | scripted | inspector")
     args = ap.parse_args()
 
-    cfg = ScenarioConfig.from_yaml(args.scenario) if args.scenario else ScenarioConfig()
+    cfg = load_config(args.scenario)
     if args.policy:
         cfg.comms.policy = args.policy
-    env = OrbitalServicingEnv(cfg)
+    env = build_env(cfg)
 
+    from spacesim.agents.scripted import make_agent
+    agent = make_agent(args.agent, env)
     for ep in range(args.episodes):
         obs, _ = env.reset(seed=ep)
+        agent.reset()
         ret, steps, t0 = 0.0, 0, time.time()
         while env.agents:
-            actions = {a: env.action_space(a).sample() for a in env.agents}
+            actions = agent.act(obs)
             obs, rew, term, trunc, info = env.step(actions)
             ret += next(iter(rew.values()))
             steps += 1
         last = next(iter(info.values()))
         cs = last["comms_episode"]
         print(f"ep {ep}: return={ret:8.2f} steps={steps} sps={steps / (time.time() - t0):.0f} "
-              f"success={last['success']} docked={last['n_docked']} | comms sent={cs['sent']} "
+              f"success={last['success']} docked={last['n_docked']} cov={last.get('coverage', '-')} | comms sent={cs['sent']} "
               f"delivered={cs['delivered']} los_drop={cs['dropped_los']} range_drop={cs['dropped_range']}")
     env.close()
 

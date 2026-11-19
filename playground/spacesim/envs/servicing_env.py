@@ -63,6 +63,7 @@ class OrbitalServicingEnv(ParallelEnv):
         self._act_space = spaces.Box(-1.0, 1.0, (3,), np.float32)
         self.state_space = spaces.Box(-np.inf, np.inf, (state_dim,), np.float32)
         self._renderer = None
+        self.last_thrust = np.zeros((self.N, 3))
 
     # ---- PettingZoo API -------------------------------------------------
     def observation_space(self, agent):
@@ -90,6 +91,7 @@ class OrbitalServicingEnv(ParallelEnv):
         mujoco.mj_forward(m, d)
 
         self.thrusters.reset()
+        self.last_thrust = np.zeros((self.N, 3))
         self.channel.reset()
         if hasattr(self.comm_policy, "reset"):
             self.comm_policy.reset()
@@ -110,6 +112,7 @@ class OrbitalServicingEnv(ParallelEnv):
         cmd = np.stack([np.asarray(actions.get(a, np.zeros(3)), dtype=float)
                         for a in self.possible_agents])
         thrust, fuel_used = self.thrusters.compute(cmd, self.ctrl_dt)
+        self.last_thrust = thrust
 
         contact_pen = 0.0
         for _ in range(c.control_decimation):

@@ -68,6 +68,10 @@ class ScriptedDocking:
 
 
 def make_agent(name, env):
+    """'random' | 'zero' | 'scripted' | 'inspector'"""
+    if name == "inspector":
+        from spacesim.agents.inspector_scripted import ScriptedInspector
+        return ScriptedInspector(env)
     agents = {"random": RandomAgent, "zero": ZeroAgent, "scripted": ScriptedDocking}
     if name not in agents:
         raise ValueError(f"unknown agent {name}; choose from {sorted(agents)}")

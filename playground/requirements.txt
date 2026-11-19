@@ -5,3 +5,5 @@ numpy>=1.26
 pyyaml>=6.0
 pytest>=8.0
 imageio[ffmpeg]>=2.34
+# optional: prepare CAD / dataset meshes (scripts/convert_mesh.py)
+# trimesh>=4.0

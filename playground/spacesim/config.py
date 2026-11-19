@@ -19,12 +19,24 @@ class ClientConfig:
     # Docking ports in the client body frame. Must be >= num_servicers.
     ports: list = field(default_factory=lambda: [
         [1.35, 0.0, 0.0], [-1.35, 0.0, 0.0], [0.0, 1.35, 0.0], [0.0, -1.35, 0.0]])
+    # Optional visual-only mesh (OBJ/STL). Physics keeps the box above.
+    visual_mesh: str | None = None
+    visual_scale: float = 1.0
+    visual_rgba: list = field(default_factory=lambda: [0.8, 0.8, 0.85, 1.0])
 
 
 @dataclass
 class ServicerConfig:
     half_size: list = field(default_factory=lambda: [0.3, 0.3, 0.3])
     mass: float = 50.0
+    visual_mesh: str | None = None
+    visual_scale: float = 1.0
+    visual_rgba: list = field(default_factory=lambda: [0.85, 0.65, 0.25, 1.0])
+    # Optional design spec (thrusters, wheels, sensors, mass properties). When set,
+    # it overrides half_size, mass, inertia and propellant, and enables 6-DOF flight.
+    spec: str | None = None
+    inertia: list | None = None   # [Ixx, Iyy, Izz] kg m^2 (filled from spec)
+    com: list | None = None
 
 
 @dataclass
@@ -74,8 +86,16 @@ class ScenarioConfig:
 
     @classmethod
     def from_yaml(cls, path):
-        with open(Path(path)) as f:
-            return _build(cls, yaml.safe_load(f) or {})
+        path = Path(path)
+        with open(path) as f:
+            cfg = _build(cls, yaml.safe_load(f) or {})
+        # mesh paths in a scenario file are relative to that file
+        for part in (cfg.client, cfg.servicer):
+            if part.visual_mesh and not Path(part.visual_mesh).is_absolute():
+                part.visual_mesh = str((path.parent / part.visual_mesh).resolve())
+        if cfg.servicer.spec and not Path(cfg.servicer.spec).is_absolute():
+            cfg.servicer.spec = str((path.parent / cfg.servicer.spec).resolve())
+        return cfg
 
 
 def _build(cls, data):

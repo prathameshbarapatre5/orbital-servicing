@@ -1,0 +1,50 @@
+# Inspection RPO with the real INS-A000 design: 6-DOF, CAD thruster layout, reaction wheels,
+# onboard ADCS pointing, and the actual sensor suite. Lighting, tumble and attitude are
+# randomized every episode.
+name: inspection_2x
+num_servicers: 2
+orbit_altitude_m: 400000
+physics_dt: 0.01
+control_decimation: 50        # control step = 0.5 s
+max_steps: 600                # 300 s episodes
+max_range: 60.0
+
+client:
+  half_size: [1.0, 1.0, 1.0]
+  mass: 500.0
+
+servicer:
+  spec: ../spacecraft/specs/ins_a000_inspector.yaml   # mass, inertia, thrusters, wheels, sensors
+
+init:
+  min_separation: 3.0
+  max_speed: 0.05
+
+comms:
+  policy: tsb
+  range_m: 30.0
+  latency_steps: 1
+  drop_prob: 0.05
+  max_msgs_per_sender: 1
+
+task:
+  coverage_target: 0.85
+  keepout_radius: 3.0
+  min_separation: 2.0
+  coverage:
+    grid: 4
+    r_min: 2.0
+    r_vis: 15.0
+    r_ir: 4.0                 # LWIR only works close: dark faces need risky close passes
+    lwir: true
+    max_view_deg: 70.0
+    min_sun_cos: 0.1
+
+dr:
+  enabled: true
+  omega_max: 0.03
+  random_sun: true
+  spawn_min: 15.0
+  spawn_max: 30.0
+  thruster_fail_prob: 0.0     # try 0.05 for robustness training
+  attitude_error_deg: 30.0

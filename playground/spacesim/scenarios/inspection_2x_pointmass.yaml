@@ -1,0 +1,57 @@
+# Inspection RPO, idealized point-mass inspectors (fast debugging; no attitude, no real thrusters).
+# Lighting (Sun direction) and client tumble are randomized every episode.
+name: inspection_2x_pointmass
+num_servicers: 2
+orbit_altitude_m: 400000
+physics_dt: 0.01
+control_decimation: 50        # control step = 0.5 s
+max_steps: 600                # 300 s episodes
+max_range: 60.0
+
+client:
+  half_size: [1.0, 1.0, 1.0]
+  mass: 500.0
+
+servicer:                     # INS-A000 Inspector 6U, CAD in mm -> m
+  half_size: [0.183, 0.113, 0.05]   # bus only (366 x 226 x 100 mm); wings are visual
+  mass: 12.0
+  visual_mesh: assets/inspector_6u.obj
+  visual_scale: 1.0                 # already converted to meters
+  visual_rgba: [0.78, 0.80, 0.84, 1.0]
+
+thrusters:
+  max_thrust: 0.5             # N per axis
+  isp: 220.0
+  fuel_kg: 0.05               # ~9 m/s total delta-v
+  deadband: 0.05
+
+init:
+  min_separation: 3.0
+  max_speed: 0.05
+
+comms:
+  policy: tsb
+  range_m: 30.0
+  latency_steps: 1
+  drop_prob: 0.05
+  max_msgs_per_sender: 1
+
+task:
+  coverage_target: 0.85
+  keepout_radius: 3.0
+  min_separation: 2.0
+  coverage:
+    grid: 4
+    r_min: 2.0
+    r_vis: 15.0
+    r_ir: 4.0                 # LWIR only works close: dark faces need risky close passes
+    lwir: true
+    max_view_deg: 70.0
+    min_sun_cos: 0.1
+
+dr:
+  enabled: true
+  omega_max: 0.03
+  random_sun: true
+  spawn_min: 15.0
+  spawn_max: 30.0

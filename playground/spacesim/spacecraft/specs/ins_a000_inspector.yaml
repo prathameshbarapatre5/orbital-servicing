@@ -1,0 +1,45 @@
+# INS-A000 Inspector 6U, derived from INS-A000_Inspector_6U_Assembly (Fusion 360, mm -> m).
+# Values marked ASSUMED are not in the CAD export: replace them from Fusion's
+# physical properties and the component datasheets.
+name: INS-A000 Inspector 6U
+mass: 12.0                          # ASSUMED (6U upper limit); use Fusion physical properties
+bus_half_size: [0.183, 0.113, 0.05] # CAD: 366 x 226 x 100 mm bus
+inertia: [0.061, 0.144, 0.185]      # ASSUMED uniform box; replace with Fusion inertia about CoM
+com: [0.0, 0.0, 0.0]                # ASSUMED geometric center
+propellant_kg: 0.5                  # ASSUMED; CAD tank ~0.7 L (Tank_Shell 60 x 200 x 76 mm)
+visual_mesh: ../scenarios/assets/inspector_6u.obj
+
+thrusters:
+  # CAD: 8 monoprop thrusters (Chamber_Nozzle_Shell_Refractory) on the end-plate corners
+  # at (+-174.3, +-92.6, +-32.6) mm, canted 30 deg from the X axis and 45 deg between Y and Z,
+  # exhausting outward. This canted-corner layout gives full 6-DOF control.
+  - name: rcs
+    mirror: [true, true, true]
+    pos: [0.1743, 0.0926, 0.0326]
+    exhaust: [0.866, 0.354, 0.354]  # outward from the (+,+,+) corner
+    max_thrust: 0.1                 # ASSUMED 100 mN class green-monoprop thruster
+    isp: 220.0                      # ASSUMED (AF-M315E / LMP-103S class)
+    min_on_time: 0.02
+
+wheels:
+  # CAD: integrated ADCS unit (ADCS_Housing, 44 x 85 x 89 mm). ASSUMED 3 orthogonal wheels.
+  - {axis: [1, 0, 0], max_torque: 0.002, max_momentum: 0.015}
+  - {axis: [0, 1, 0], max_torque: 0.002, max_momentum: 0.015}
+  - {axis: [0, 0, 1], max_torque: 0.002, max_momentum: 0.015}
+
+sensors:
+  # All payload boresights point +X (CAD front face). FOV and range ASSUMED from component class.
+  - {name: vis_camera, kind: visible, boresight: [1, 0, 0], fov_deg: 40, r_min: 2.0, r_max: 15.0, needs_sun: true}
+  - {name: lwir_640, kind: lwir, boresight: [1, 0, 0], fov_deg: 32, r_min: 2.0, r_max: 4.0, needs_sun: false}
+  - {name: telescope, kind: telescope, boresight: [1, 0, 0], fov_deg: 6, r_min: 5.0, r_max: 40.0, needs_sun: true}
+  - {name: tof_ranger, kind: tof, boresight: [1, 0, 0], fov_deg: 30, r_min: 0.5, r_max: 10.0, needs_sun: false, counts_for_coverage: false}
+
+adcs:
+  bandwidth: 0.4
+  damping: 0.9
+  dump_threshold: 0.6
+  dump_gain: 0.05
+
+notes:
+  star_tracker: "ST_Head looks +Y (not modeled as a coverage sensor)"
+  source: "geometry auto-extracted from the Fusion OBJ export"

@@ -1,0 +1,21 @@
+# Easy curriculum stage for inspection: no tumble, fixed Sun, close spawn.
+name: inspection_2x_easy
+num_servicers: 2
+physics_dt: 0.01
+control_decimation: 50
+max_steps: 600
+servicer:
+  spec: ../spacecraft/specs/ins_a000_inspector.yaml
+init:
+  min_separation: 3.0
+comms:
+  max_msgs_per_sender: 1
+task:
+  coverage_target: 0.6          # sensor ranges come from the design spec
+dr:
+  enabled: true
+  omega_max: 0.0
+  random_sun: false
+  spawn_min: 8.0
+  spawn_max: 12.0
+  attitude_error_deg: 0.0
